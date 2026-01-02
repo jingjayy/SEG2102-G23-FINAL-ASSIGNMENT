@@ -1,0 +1,36 @@
+Database initialized successfully.
+Creating indexes for conventional_chunks...
+Indexes created successfully.
+[31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on http://127.0.0.1:5000
+[33mPress CTRL+C to quit[0m
+ * Restarting with stat
+Database initialized successfully.
+Creating indexes for conventional_chunks...
+Indexes created successfully.
+ * Debugger is active!
+ * Debugger PIN: 438-178-632
+DEBUG: Query='Bankruptcy'
+DEBUG: Embedding Type=<class 'list'>
+DEBUG: Embedding Length=1536
+DEBUG: First 5 dims=[-0.019719237, 0.021281233, 0.0067730383, -0.05443044, 0.015495838]
+Partitioned Search failed: invalid input syntax for type vector: "Bankruptcy"
+LINE 2: ...     SELECT content, metadata, 1 - (embedding <=> 'Bankruptc...
+                                                             ^
+DETAIL:  Vector contents must start with "[".
+
+127.0.0.1 - - [08/Dec/2025 17:18:37] "POST /search HTTP/1.1" 200 -
+ * Detected change in 'W:\\Database\\vector_db.py', reloading
+ * Restarting with stat
+Database initialized successfully.
+Creating indexes for conventional_chunks...
+Indexes created successfully.
+ * Debugger is active!
+ * Debugger PIN: 438-178-632
+DEBUG: Query='Bankruptcy'
+DEBUG: Embedding Type=<class 'list'>
+DEBUG: Embedding Length=1536
+DEBUG: First 5 dims=[-0.019719237, 0.021281233, 0.0067730383, -0.05443044, 0.015495838]
+127.0.0.1 - - [08/Dec/2025 17:21:10] "POST /search HTTP/1.1" 200 -
+ * Detected change in 'W:\\Database\\app.py', reloading
+ * Restarting with stat

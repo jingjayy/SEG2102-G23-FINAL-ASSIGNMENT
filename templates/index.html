@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Intelligent Partitioned Search vs Generic HNSW</title>
+    <style>
+        :root {
+            --primary: #2563eb;
+            --bg: #f8fafc;
+            --card: #ffffff;
+            --text: #1e293b;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            margin: 0;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .upload-section {
+            background: var(--card);
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .search-section {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 30px;
+        }
+
+        input[type="text"] {
+            flex: 1;
+            padding: 12px;
+            border: 1px solid #cbd5e1;
+            border-radius: 8px;
+            font-size: 16px;
+        }
+
+        button {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: background 0.2s;
+        }
+
+        button:hover {
+            background: #1d4ed8;
+        }
+
+        .results-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 20px;
+        }
+
+        .result-column {
+            background: var(--card);
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+
+        .result-column h2 {
+            border-bottom: 2px solid #e2e8f0;
+            padding-bottom: 10px;
+            margin-top: 0;
+        }
+
+        .filter-badge {
+            display: inline-block;
+            background: #e0f2fe;
+            color: #0369a1;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.8em;
+            margin-right: 5px;
+            margin-bottom: 10px;
+        }
+
+        .result-card {
+            background: #f1f5f9;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+        }
+
+        .score {
+            font-size: 0.85em;
+            color: #64748b;
+            font-weight: bold;
+            margin-bottom: 5px;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .meta-tag {
+            font-size: 0.8em;
+            color: #475569;
+            background: #cbd5e1;
+            padding: 2px 6px;
+            border-radius: 4px;
+        }
+
+        .content {
+            font-size: 0.95em;
+            line-height: 1.5;
+            white-space: pre-wrap;
+        }
+
+        .metrics-bar {
+            background: #e2e8f0;
+            padding: 8px;
+            border-radius: 6px;
+            margin-bottom: 15px;
+            font-size: 0.9em;
+            display: flex;
+            justify-content: space-between;
+            color: #475569;
+            font-weight: 500;
+        }
+
+        .loader {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid var(--primary);
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+            margin: 20px auto;
+            display: none;
+        }
+
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1>Intelligent Partitioned Search vs Generic HNSW</h1>
+
+        <div class="upload-section">
+            <h3>Upload Document (PDF/DOCX)</h3>
+            <input type="file" id="fileInput">
+            <button onclick="uploadFile()">Upload & Ingest</button>
+            <div id="uploadStatus" style="margin-top: 10px;"></div>
+            <div id="uploadLoader" class="loader"></div>
+        </div>
+
+        <div class="search-section">
+            <input type="text" id="searchInput"
+                placeholder="Enter your search query (e.g., 'termination benefits in employment law')...">
+            <button onclick="performSearch()">Search</button>
+        </div>
+
+        <div class="results-container">
+            <div class="result-column">
+                <h2>Proposed Strategy (Partitioned)</h2>
+                <div id="robustMetrics" class="metrics-bar" style="display:none"></div>
+                <div id="robustFilters"></div>
+                <div id="robustResults"></div>
+            </div>
+            <div class="result-column">
+                <h2>Standard Strategy (HNSW)</h2>
+                <div id="conventionalMetrics" class="metrics-bar" style="display:none"></div>
+                <div id="conventionalResults"></div>
+            </div>
+            <div class="result-column">
+                <h2>Standard Strategy (IVFFlat)</h2>
+                <div id="ivfflatMetrics" class="metrics-bar" style="display:none"></div>
+                <div id="ivfflatResults"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        async function uploadFile() {
+            const fileInput = document.getElementById('fileInput');
+            const status = document.getElementById('uploadStatus');
+            const loader = document.getElementById('uploadLoader');
+
+            if (!fileInput.files[0]) {
+                alert("Please select a file");
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('file', fileInput.files[0]);
+
+            status.innerText = "Ingesting... This may take a while.";
+            loader.style.display = "block";
+
+            try {
+                const response = await fetch('/upload', {
+                    method: 'POST',
+                    body: formData
+                });
+                const result = await response.json();
+
+                if (response.ok) {
+                    status.innerText = `Success! Robust Chunks: ${result.robust_count}, Conventional Chunks: ${result.conventional_count}`;
+                } else {
+                    status.innerText = `Error: ${result.error}`;
+                }
+            } catch (e) {
+                status.innerText = `Error: ${e.message}`;
+            } finally {
+                loader.style.display = "none";
+            }
+        }
+
+        function performSearch() {
+            const query = document.getElementById('searchInput').value;
+            if (!query) return;
+
+            // Clear previous results and show loaders
+            setupSearchUI('robust');
+            setupSearchUI('conventional');
+            setupSearchUI('ivfflat');
+
+            // Trigger independent searches (Fire and Forget)
+            fetchSearch('robust', query);
+            fetchSearch('conventional', query);
+            fetchSearch('ivfflat', query);
+        }
+
+        function setupSearchUI(type) {
+            document.getElementById(`${type}Results`).innerHTML = '<div class="loader" style="display:block"></div>';
+            document.getElementById(`${type}Metrics`).style.display = 'none';
+            if (type === 'robust') document.getElementById('robustFilters').innerHTML = '';
+        }
+
+        async function fetchSearch(type, query) {
+            try {
+                const response = await fetch(`/search/${type}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ query: query })
+                });
+                const result = await response.json();
+
+                if (type === 'robust' && result.filters) {
+                    renderFilters(result.filters);
+                }
+
+                renderMetrics(type, result.metrics);
+                renderResults(document.getElementById(`${type}Results`), result.results, type === 'robust');
+
+            } catch (e) {
+                document.getElementById(`${type}Results`).innerHTML = `<p style="color:red">Error: ${e.message}</p>`;
+            }
+        }
+
+        function renderFilters(filters) {
+            const container = document.getElementById('robustFilters');
+            let filterHtml = '<strong>Detected Scope:</strong><br>';
+            if (filters.legal_domain) filterHtml += `<span class="filter-badge">Domain: ${filters.legal_domain}</span>`;
+            if (filters.act_name) filterHtml += `<span class="filter-badge">Act: ${filters.act_name}</span>`;
+            if (filters.keywords) filterHtml += `<span class="filter-badge">Keywords: ${filters.keywords.join(', ')}</span>`;
+            container.innerHTML = filterHtml;
+        }
+
+        function renderMetrics(type, metrics) {
+            const container = document.getElementById(`${type}Metrics`);
+            if (metrics) {
+                container.innerHTML = `<span>⏱️ ${metrics.time}</span> <span>🎯 Avg Sim: ${metrics.accuracy}</span>`;
+                container.style.display = 'flex';
+            }
+        }
+
+        function renderResults(container, results, isRobust) {
+            container.innerHTML = "";
+            if (!results || results.length === 0) {
+                container.innerHTML = "<p>No results found.</p>";
+                return;
+            }
+
+            results.forEach(item => {
+                const card = document.createElement('div');
+                card.className = 'result-card';
+
+                const score = document.createElement('div');
+                score.className = 'score';
+                score.innerHTML = `<span>Similarity: ${(item.similarity * 100).toFixed(2)}%</span>`;
+
+                if (isRobust && item.detected_act) {
+                    score.innerHTML += `<span class="meta-tag">${item.detected_act}</span>`;
+                }
+
+                if (isRobust && item.fallback) {
+                    score.innerHTML += `<span class="meta-tag" style="background:#fecaca; color:#991b1b;">Fallback: Yes</span>`;
+                }
+
+                const content = document.createElement('div');
+                content.className = 'content';
+                const text = item.content.length > 300 ? item.content.substring(0, 300) + "..." : item.content;
+                content.innerText = text;
+
+                card.appendChild(score);
+                card.appendChild(content);
+                container.appendChild(card);
+            });
+        }
+    </script>
+</body>
+
+</html>
