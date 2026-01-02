@@ -10,11 +10,14 @@
 ## Group Members
 
 | Student Name             | Student ID | Contribution Focus |
+| :----------------------- | :--------- | :----------------- |
 | **Jing Jay Hong**        | 22008338   | Methodology, Pipeline Architecture, Analysis |
 | **Vicky Leow Ming Fong** | 22009591   | Literature Review, Report Synthesis |
 | **Wei Ting Tan**         | 21058664   | Data Collection, Formatting, Abstract/Conclusion |
 
-## Project Overview
+---
+
+# Project Overview
 
 This repository contains the source code, benchmarking scripts, and experimental data for the research report: **"Scaling Strategies for High-Dimensional Vector Databases."**
 
@@ -53,9 +56,41 @@ The system was developed using **PostgreSQL (pgvector)** and **Large Language Mo
     *   *Structural Analysis:* Google Gemini 2.5 Flash
 *   **Libraries:** Flask, LangChain, Psycopg2, Scikit-learn
 
+---
+
 ## Setup & Installation
 
 ### 1. Prerequisites
 Ensure you have **PostgreSQL** installed with the `pgvector` extension enabled:
 ```sql
 CREATE EXTENSION vector;
+```
+
+### 2. Install Dependencies
+```bash
+pip install -r requirements.txt
+```
+
+### 3. Environment Configuration
+```ini
+Locate the file named env.example in this repository.
+Rename it to .env.
+Open the file and fill in your actual credentials (API Key and Database Password):
+# Replace with your actual Google AI API Key
+GOOGLE_API_KEY=your_actual_api_key_here
+
+# Update with your DB credentials
+DATABASE_URL="postgresql://postgres:your_password@localhost:5432/Assignment"
+```
+
+### 4. Running the Benchmark
+```bash
+To replicate the results presented in the report:
+python benchmark_search.py
+```
+
+## Key Research Findings
+
+1.  **Precision Dominance:** The proposed **Intelligent Partitioned Framework** achieved **100% retrieval precision** on statutory queries.
+2.  **Latency Efficiency:** The proposed framework achieved the **lowest average latency (1.47s)** compared to HNSW (1.50s) and IVFFlat (1.52s).
+3.  **Failure Analysis:** The disk-based IVFFlat index proved unreliable, returning **0.00% accuracy** on complex queries.
